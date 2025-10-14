@@ -33,11 +33,15 @@ func NewController(clientset kubernetes.Interface, resync time.Duration, podSet 
 		podSet:          podSet,
 	}
 
-	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	handler, err := podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.onPodAdd,
 		UpdateFunc: c.onPodUpdate,
 		DeleteFunc: c.onPodDelete,
 	})
+	if err != nil {
+		klog.Errorf("Failed to add event handler: %v", err)
+	}
+	_ = handler
 
 	return c
 }
