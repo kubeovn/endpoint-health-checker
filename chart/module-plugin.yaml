@@ -1,0 +1,37 @@
+apiVersion: cluster.alauda.io/v1alpha1
+kind: ModulePlugin
+metadata:
+  annotations:
+    cpaas.io/built-in-plugin: 'true'
+    cpaas.io/display-name: '{"en": "Alauda Container Platform Endpoint Health Checker", "zh": "Alauda Container Platform Endpoint Health Checker"}'
+    cpaas.io/module-name: 'endpoint-health-checker'
+  labels:
+    cpaas.io/module-catalog: 'network'
+    cpaas.io/module-name: 'endpoint-health-checker'
+    cpaas.io/module-type: 'plugin'
+    cpaas.io/product: 'ACP'
+  name: endpoint-health-checker
+spec:
+  name: endpoint-health-checker
+  affinity:
+    clusterAffinity:
+      matchExpressions:
+        - key: cluster-type
+          operator: In
+          values:
+            - Baremetal
+            - DCS
+  appReleases:
+  - name: endpoint-health-checker
+    chartVersions:
+    - name: acp/chart-endpoint-health-checker
+      releaseName: endpoint-health-checker
+      version: v4.2.0-beta.10.g2f73247e
+  deleteable: true
+  logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjMDA3QUY1IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xLjYyIDUuNTEzYTEuNjIgMS42MiAwIDAgMSAuMjA2IDMuMjNBMTAuNzE2IDEwLjcxNiAwIDAgMCA1Ljg4IDIwLjc2OGExMC42ODQgMTAuNjg0IDAgMCAwIDEzLjU4Mi0xLjA5LjY0Ny42NDcgMCAxIDEgLjkwNC45M0ExMS45NzggMTEuOTc4IDAgMCAxIDUuMTM3IDIxLjgzIDEyLjAxNSAxMi4wMTUgMCAwIDEgLjU4MSA4LjM4IDEuNjIgMS42MiAwIDAgMSAxLjYyIDUuNTEzem0xNy4yNjYtMy4zNDJhMTIuMDE2IDEyLjAxNiAwIDAgMSA0LjY1OSAxMy4xMSAxLjYyIDEuNjIgMCAxIDEtMS4yMzgtLjUyNGguMDM4YTEwLjcxOSAxMC43MTkgMCAwIDAtNC4yMDItMTEuNTI0QTEwLjY4MyAxMC42ODMgMCAwIDAgNC41MDcgNC4zNzVhLjY0Ny42NDcgMCAxIDEtLjkxLS45MjMgMTEuOTc4IDExLjk3OCAwIDAgMSAxNS4yOS0xLjI4MXoiIGZpbGwtcnVsZT0ibm9uemVybyIvPjxwYXRoIGQ9Ik04LjIxMyAxMi44NDNhLjUuNSAwIDAgMSAuNjg1LS4xNzVsMy4yNjUgMS45MzgtNi4zODkgNC4xMDcgMi40MDctNS44MDdhLjUuNSAwIDAgMSAuMDMyLS4wNjN6TTExLjc2IDUuMjVhMSAxIDAgMCAxIDEuMzE4LjUxMmw1LjQ4MiAxMi40NDctOS43NzYtNS44NDlhLjUuNSAwIDAgMS0uMi0uNjMzbDIuNjY2LTUuOTdhMSAxIDAgMCAxIC41MS0uNTA3eiIvPjwvZz48L3N2Zz4="
+  description:
+    zh: "Endpoint Health Checker是一个插件，用于检查端点的健康状况, 如果endpoint不可用，则将endpoint从负载均衡器中移除。使用前请确保被健康检查的资源配置 annotation: endpoint-health-checker.io/enabled: 'true'"
+    en: "Endpoint Health Checker is a plugin for checking the health of endpoints. If the endpoint is not available, it will be removed from the load balancer. Before using, please ensure that resources being health checked are configured with annotation: endpoint-health-checker.io/enabled: 'true'"
+  mainChart: acp/chart-endpoint-health-checker
+  upgradeRiskLevel: High
+  labelCluster: "false"

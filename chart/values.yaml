@@ -1,0 +1,49 @@
+namespace: kube-system
+replicaCount: 3
+global:
+  nodeSelector:
+    kubernetes.io/os: linux
+  registry:
+    address: build-harbor.alauda.cn
+    imagePullSecrets: []
+  images:
+    endpoint_health_checker:
+      repository: acp/endpoint-health-checker
+      tag: v4.2.0-beta.10.g2f73247e
+      pullPolicy: IfNotPresent
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+    endpointHealthChecker:
+      tag: v0.0.0-beta.24.g5ff721c3
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app: endpoint-health-checker
+        topologyKey: "kubernetes.io/hostname"
+logLevel: 2
+## 切换时间理论最大应该是 healthCheckInterval + healthCheckProbeTimeout * healthCheckRetryCount 然后发生切换。
+## 健康检查轮询时间
+healthCheckInterval: 1s
+## 健康检查并发数
+healthCheckConcurrency: 10
+## 健康检查超时时间
+healthCheckProbeTimeout: 1s
+## 健康检查重试次数
+healthCheckRetryCount: 10
+## Leader选举配置
+leaderElection:
+  ## Lease锁名称
+  leaseName: "endpoint-health-checker-leader"
+  ## Lease持续时间
+  leaseDuration: 4s
+  ## 续约截止时间
+  renewDeadline: 2s
+  ## 重试周期
+  retryPeriod: 500ms

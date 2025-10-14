@@ -1,0 +1,115 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: endpoint-health-checker
+  namespace: kube-system
+  labels:
+    app: endpoint-health-checker
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: endpoint-health-checker
+  labels:
+    app: endpoint-health-checker
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/status", "services", "endpoints", "nodes"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: endpoint-health-checker
+  labels:
+    app: endpoint-health-checker
+subjects:
+  - kind: ServiceAccount
+    name: endpoint-health-checker
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: endpoint-health-checker
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: endpoint-health-checker
+  namespace: kube-system
+  labels:
+    app: endpoint-health-checker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: endpoint-health-checker
+  template:
+    metadata:
+      labels:
+        app: endpoint-health-checker
+    spec:
+      hostNetwork: true
+      serviceAccountName: endpoint-health-checker
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /var/log/endpoint_health_checker
+            type: DirectoryOrCreate
+      containers:
+        - name: endpoint-health-checker
+          image: "endpoint_health_checker:v0.1.0"
+          imagePullPolicy: IfNotPresent
+          command: ["/endpoint_health_checker"]
+          args:
+            - "--v=4"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/endpoint_health_checker
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HEALTH_CHECK_INTERVAL
+              value: "1s"
+            - name: HEALTH_CHECK_CONCURRENCY
+              value: "10"
+            - name: HEALTH_CHECK_TIMEOUT
+              value: "1s"
+            - name: HEALTH_CHECK_RETRY_COUNT
+              value: "10"
+            - name: LEASE_NAME
+              value: "endpoint-health-checker-leader"
+            - name: LEASE_DURATION
+              value: "4s"
+            - name: RENEW_DEADLINE
+              value: "2s"
+            - name: RETRY_PERIOD
+              value: "500ms"
+          securityContext:
+            privileged: true
+            capabilities:
+              add:
+                - NET_RAW
+          resources:
+            {}
+      nodeSelector:
+        {}
+      tolerations:
+        []
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: endpoint-health-checker
+            topologyKey: kubernetes.io/hostname 

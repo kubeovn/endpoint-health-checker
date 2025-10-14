@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: endpoint-health-checker
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: endpoint-health-checker
+spec:
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: {{ include "endpoint-health-checker.replicaCount" . }}
+  selector:
+    matchLabels:
+      app: endpoint-health-checker
+  template:
+    metadata:
+      labels:
+        app: endpoint-health-checker
+    spec:
+      hostNetwork: true
+      serviceAccountName: endpoint-health-checker
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /var/log/endpoint_health_checker
+            type: DirectoryOrCreate
+      containers:
+        - name: endpoint-health-checker
+          image: "{{ .Values.global.registry.address }}/{{ .Values.global.images.endpoint_health_checker.repository }}:{{ .Values.global.images.endpoint_health_checker.tag }}"
+          imagePullPolicy: {{ .Values.global.images.endpoint_health_checker.pullPolicy }}
+          command: ["/endpoint_health_checker"]
+          args:
+            - "--v={{ .Values.logLevel | default 2 }}"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/endpoint_health_checker
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HEALTH_CHECK_INTERVAL
+              value: "{{ .Values.healthCheckInterval }}"
+            - name: HEALTH_CHECK_CONCURRENCY
+              value: "{{ .Values.healthCheckConcurrency }}"
+            - name: HEALTH_CHECK_TIMEOUT
+              value: "{{ .Values.healthCheckProbeTimeout }}"
+            - name: HEALTH_CHECK_RETRY_COUNT
+              value: "{{ .Values.healthCheckRetryCount }}"
+            - name: LEASE_NAME
+              value: "{{ .Values.leaderElection.leaseName }}"
+            - name: LEASE_DURATION
+              value: "{{ .Values.leaderElection.leaseDuration }}"
+            - name: RENEW_DEADLINE
+              value: "{{ .Values.leaderElection.renewDeadline }}"
+            - name: RETRY_PERIOD
+              value: "{{ .Values.leaderElection.retryPeriod }}"
+          securityContext:
+            privileged: false
+            runAsUser: 697
+            runAsGroup: 697
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_RAW
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | default "100m" }}
+              memory: {{ .Values.resources.requests.memory | default "128Mi" }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | default "500m" }}
+              memory: {{ .Values.resources.limits.memory | default "512Mi" }}
+      nodeSelector:
+        {{- range $key, $val := .Values.global.nodeSelector }}
+        {{ $key }}: {{ $val | quote }}
+        {{- end }}
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+      - effect: "NoExecute"
+        operator: "Exists"
+      - effect: "NoSchedule"
+        operator: "Exists"
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/cpaas-system
+        operator: Exists
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }} 
