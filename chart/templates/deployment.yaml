@@ -29,7 +29,11 @@ spec:
             type: DirectoryOrCreate
       containers:
         - name: endpoint-health-checker
+          {{- if .Values.global.registry.address }}
           image: "{{ .Values.global.registry.address }}/{{ .Values.global.images.endpoint_health_checker.repository }}:{{ .Values.global.images.endpoint_health_checker.tag }}"
+          {{- else }}
+          image: "{{ .Values.global.images.endpoint_health_checker.repository }}:{{ .Values.global.images.endpoint_health_checker.tag }}"
+          {{- end }}
           imagePullPolicy: {{ .Values.global.images.endpoint_health_checker.pullPolicy }}
           command: ["/endpoint_health_checker"]
           args:

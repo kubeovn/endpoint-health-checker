@@ -136,13 +136,23 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
+    - name: Read VERSION
+      id: version
+      run: |
+        VERSION=$(cat VERSION | tr -d '\n')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Image version: $VERSION"
+
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./dist/images/Dockerfile
         push: false
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: |
+          ${{ env.IMAGE_NAME }}:main
+          ${{ env.IMAGE_NAME }}:latest
+          ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -190,25 +200,42 @@ jobs:
     - name: Load Docker image into Kind cluster
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
+        echo "Loading Docker image into Kind cluster..."
+        echo "VERSION: $VERSION"
+
+        # List available images after loading
         docker load < /tmp/image.tar
-        docker tag ${{ env.IMAGE_NAME }}:main endpoint_health_checker:$VERSION
-        kind load docker-image endpoint_health_checker:$VERSION --name test-cluster
+        echo "Available images after load:"
+        docker images | grep ${{ env.IMAGE_NAME }}
+
+        # The image should already have the correct tag from build step
+        kind load docker-image ${{ env.IMAGE_NAME }}:$VERSION --name test-cluster
+        kind load docker-image ${{ env.IMAGE_NAME }}:main --name test-cluster
+
+        # Verify images in Kind cluster
+        echo "Images in Kind cluster:"
+        docker exec test-cluster-control-plane docker images | grep ${{ env.IMAGE_NAME }} || echo "No images found with expected name"
 
     - name: Install endpoint-health-checker using Helm
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
         helm install endpoint-health-checker ./chart \
-          --set image.repository=endpoint_health_checker \
-          --set image.tag=$VERSION \
-          --set image.pullPolicy=IfNotPresent \
+          --set global.images.endpoint_health_checker.repository=endpoint-health-checker \
+          --set global.images.endpoint_health_checker.tag=$VERSION \
+          --set global.images.endpoint_health_checker.pullPolicy=IfNotPresent \
+          --set global.registry.address="" \
           --namespace kube-system \
           --wait \
           --timeout=5m
 
     - name: Verify deployment
       run: |
+        echo "Checking deployment status..."
         kubectl get pods -n kube-system -l app=endpoint-health-checker
         kubectl describe pods -n kube-system -l app=endpoint-health-checker
+
+        echo "Checking deployment events..."
+        kubectl get events -n kube-system --sort-by='.lastTimestamp' | grep endpoint-health-checker
 
     - name: Check pod logs
       run: |
