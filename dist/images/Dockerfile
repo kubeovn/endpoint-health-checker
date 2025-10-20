@@ -1,11 +1,11 @@
-FROM docker-mirrors.alauda.cn/library/golang:1.24.6-alpine AS builder
+FROM golang:1.24.6-alpine AS builder
 
 WORKDIR /workspace
 ENV GOPROXY=https://goproxy.cn,direct
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o endpoint_health_checker ./main.go
+RUN VERSION=$(cat VERSION | tr -d '\n') CGO_ENABLED=0 GOOS=linux go build -ldflags="-X main.Version=$VERSION -s -w" -o endpoint_health_checker ./main.go
 RUN apk add --no-cache libcap && setcap cap_net_raw+ep endpoint_health_checker
 
 FROM scratch

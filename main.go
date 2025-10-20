@@ -35,16 +35,22 @@ func init() {
 func InitLog() {
 	// Configure klog to output to file
 	logDir := "/var/log/endpoint_health_checker"
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0750); err != nil {
 		// If we can't create the directory, just continue with default logging
 		klog.Warningf("Failed to create log directory %s: %v, using default logging", logDir, err)
 		return
 	}
 
 	// Set klog flags to output to both file and stderr
-	flag.Set("alsologtostderr", "true")
-	flag.Set("log_dir", logDir)
-	flag.Set("log_file", filepath.Join(logDir, "endpoint_health_checker.log"))
+	if err := flag.Set("alsologtostderr", "true"); err != nil {
+		klog.Warningf("Failed to set alsologtostderr flag: %v", err)
+	}
+	if err := flag.Set("log_dir", logDir); err != nil {
+		klog.Warningf("Failed to set log_dir flag: %v", err)
+	}
+	if err := flag.Set("log_file", filepath.Join(logDir, "endpoint_health_checker.log")); err != nil {
+		klog.Warningf("Failed to set log_file flag: %v", err)
+	}
 
 	klog.Infof("Logging configured to output to %s", filepath.Join(logDir, "endpoint_health_checker.log"))
 }

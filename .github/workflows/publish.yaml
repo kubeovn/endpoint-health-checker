@@ -1,0 +1,41 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 16 * * *"
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Publish Images
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Publish
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_CLI_EXPERIMENTAL: enabled
+        run: |
+          VERSION=$(cat VERSION)
+          echo "Publishing version: $VERSION"
+
+          # Login to Docker Hub
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+          # Pull existing image (kube-ovn style)
+          docker pull kubeovn/endpoint-health-checker:$VERSION
+
+          # Create and push manifest for multi-arch support (future)
+          docker manifest create kubeovn/endpoint-health-checker:$VERSION kubeovn/endpoint-health-checker:$VERSION
+          docker manifest push kubeovn/endpoint-health-checker:$VERSION
+
+          # Also update latest if this is the current version
+          docker pull kubeovn/endpoint-health-checker:main
+          docker manifest create kubeovn/endpoint-health-checker:latest kubeovn/endpoint-health-checker:main
+          docker manifest push kubeovn/endpoint-health-checker:latest

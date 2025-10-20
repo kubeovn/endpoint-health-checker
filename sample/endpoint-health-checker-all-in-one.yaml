@@ -62,7 +62,7 @@ spec:
             type: DirectoryOrCreate
       containers:
         - name: endpoint-health-checker
-          image: "endpoint_health_checker:v0.1.0"
+          image: "kubeovn/endpoint-health-checker:v0.1.0"
           imagePullPolicy: IfNotPresent
           command: ["/endpoint_health_checker"]
           args:

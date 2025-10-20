@@ -60,10 +60,18 @@ spec:
 
 ## 部署
 
-### 使用 Helm
+### 在线 Helm Repository 部署
 
 ```bash
-helm install endpoint-health-checker ./charts/endpoint-health-checker
+# 添加 Helm Repository
+helm repo add kubeovn-hc https://kubeovn.github.io/endpoint-health-checker/
+helm repo update
+
+# 安装到 kube-system 命名空间
+helm install endpoint-health-checker kubeovn-hc/endpoint-health-checker --namespace kube-system
+
+# 或者安装到自定义命名空间
+helm install endpoint-health-checker kubeovn-hc/endpoint-health-checker --namespace endpoint-health-checker --create-namespace
 ```
 
 ### 配置示例
