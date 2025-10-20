@@ -70,7 +70,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: endpoint-health-checker-binary
+        name: endpoint-health-checker
         path: dist/images/endpoint_health_checker
         retention-days: 7
 
@@ -117,7 +117,7 @@ jobs:
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
-        name: endpoint-health-checker-binary
+        name: endpoint-health-checker
         path: dist/images/
 
     - name: Set up Docker Buildx
