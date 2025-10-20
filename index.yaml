@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  endpoint-health-checker:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2025-10-20T09:10:38.034590931Z"
+    description: A Helm chart for endpoint health checker with configurable retry
+      mechanism and timeout settings
+    digest: 442a6cb7e973f34ad6186199fab6d4eca5d97478841010b9ef8cd55b03de6ad9
+    name: endpoint-health-checker
+    urls:
+    - endpoint-health-checker-v0.1.0.tgz
+    version: v0.1.0
+generated: "2025-10-20T09:10:38.034598074Z"
