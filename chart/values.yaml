@@ -8,7 +8,7 @@ global:
     imagePullSecrets: []
   images:
     endpoint_health_checker:
-      repository: endpoint-health-checker
+      repository: kubeovn/endpoint-health-checker
       tag: v0.1.0
       pullPolicy: IfNotPresent
 resources:

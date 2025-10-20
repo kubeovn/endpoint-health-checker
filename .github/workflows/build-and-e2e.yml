@@ -18,7 +18,7 @@ concurrency:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: endpoint-health-checker
+  IMAGE_NAME: kubeovn/endpoint-health-checker
 
 jobs:
   build:
@@ -220,7 +220,7 @@ jobs:
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
         helm install endpoint-health-checker ./chart \
-          --set global.images.endpoint_health_checker.repository=endpoint-health-checker \
+          --set global.images.endpoint_health_checker.repository=${{ env.IMAGE_NAME }} \
           --set global.images.endpoint_health_checker.tag=$VERSION \
           --set global.images.endpoint_health_checker.pullPolicy=IfNotPresent \
           --set global.registry.address="" \
