@@ -1,0 +1,20 @@
+# Chart Releaser Configuration
+# See https://github.com/helm/chart-releaser for configuration options
+
+# The GitHub pages branch to deploy to
+pages-branch: gh-pages
+
+# The GitHub pages directory
+pages-dir-path: .
+
+# The index file path
+index-path: index.yaml
+
+# Chart package directory path
+package-path: .cr-release-packages
+
+# Skip existing charts
+skip-existing: true
+
+# Generate packages with index
+packages-with-index: true

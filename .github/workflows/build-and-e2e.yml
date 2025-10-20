@@ -200,7 +200,7 @@ jobs:
     - name: Install endpoint-health-checker using Helm
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
-        helm install endpoint-health-checker ./chart \
+        helm install endpoint-health-checker ./charts \
           --set global.images.endpoint_health_checker.repository=${{ env.IMAGE_NAME }} \
           --set global.images.endpoint_health_checker.tag=$VERSION \
           --set global.images.endpoint_health_checker.pullPolicy=IfNotPresent \

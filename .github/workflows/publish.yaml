@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish (e.g., v0.1.0)'
-        required: true
+        description: 'Version to publish (e.g., v0.1.0). Leave empty to use VERSION file.'
+        required: false
         type: string
+        default: ''
   schedule:
     - cron: "20 16 * * *"
 
