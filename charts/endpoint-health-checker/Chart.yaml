@@ -1,8 +1,5 @@
 apiVersion: v2
 name: endpoint-health-checker
 description: A Helm chart for endpoint health checker with configurable retry mechanism and timeout settings
-version: v4.2.0-beta.10.g2f73247e
+version: v0.1.0
 appVersion: "v0.1.0"
-annotations:
-  branch: refs/heads/master
-  commit: 2f73247e05f32bf882893dc668e364c9d9091117

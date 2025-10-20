@@ -18,7 +18,7 @@ concurrency:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: endpoint-health-checker
+  IMAGE_NAME: kubeovn/endpoint-health-checker
 
 jobs:
   build:
@@ -60,20 +60,6 @@ jobs:
     - name: Run Unit Tests
       run: go test -v ./...
 
-    - name: Build binary
-      env:
-        GO_VERSION: ${{ steps.setup-go.outputs.go-version }}
-      run: |
-        VERSION=$(cat VERSION | tr -d '\n')
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=$VERSION" -o dist/images/endpoint_health_checker ./main.go
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: endpoint-health-checker-binary
-        path: dist/images/endpoint_health_checker
-        retention-days: 7
-
   security-scan:
     name: Security Scan
     runs-on: ubuntu-24.04
@@ -114,12 +100,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: endpoint-health-checker-binary
-        path: dist/images/
-
+  
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
@@ -136,13 +117,23 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
+    - name: Read VERSION
+      id: version
+      run: |
+        VERSION=$(cat VERSION | tr -d '\n')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Image version: $VERSION"
+
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./dist/images/Dockerfile
         push: false
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: |
+          ${{ env.IMAGE_NAME }}:main
+          ${{ env.IMAGE_NAME }}:latest
+          ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -151,7 +142,7 @@ jobs:
     - name: Upload Docker image artifact
       uses: actions/upload-artifact@v4
       with:
-        name: docker-image
+        name: endpoint-health-checker
         path: /tmp/image.tar
         retention-days: 7
 
@@ -184,31 +175,48 @@ jobs:
     - name: Download Docker image artifact
       uses: actions/download-artifact@v4
       with:
-        name: docker-image
+        name: endpoint-health-checker
         path: /tmp/
 
     - name: Load Docker image into Kind cluster
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
+        echo "Loading Docker image into Kind cluster..."
+        echo "VERSION: $VERSION"
+
+        # List available images after loading
         docker load < /tmp/image.tar
-        docker tag ${{ env.IMAGE_NAME }}:main endpoint_health_checker:$VERSION
-        kind load docker-image endpoint_health_checker:$VERSION --name test-cluster
+        echo "Available images after load:"
+        docker images | grep ${{ env.IMAGE_NAME }}
+
+        # The image should already have the correct tag from build step
+        kind load docker-image ${{ env.IMAGE_NAME }}:$VERSION --name test-cluster
+        kind load docker-image ${{ env.IMAGE_NAME }}:main --name test-cluster
+
+        # Verify images in Kind cluster
+        echo "Images in Kind cluster:"
+        docker exec test-cluster-control-plane docker images | grep ${{ env.IMAGE_NAME }} || echo "No images found with expected name"
 
     - name: Install endpoint-health-checker using Helm
       run: |
         VERSION=$(cat VERSION | tr -d '\n')
-        helm install endpoint-health-checker ./chart \
-          --set image.repository=endpoint_health_checker \
-          --set image.tag=$VERSION \
-          --set image.pullPolicy=IfNotPresent \
+        helm install endpoint-health-checker ./charts/endpoint-health-checker \
+          --set global.images.endpoint_health_checker.repository=${{ env.IMAGE_NAME }} \
+          --set global.images.endpoint_health_checker.tag=$VERSION \
+          --set global.images.endpoint_health_checker.pullPolicy=IfNotPresent \
+          --set global.registry.address="" \
           --namespace kube-system \
           --wait \
           --timeout=5m
 
     - name: Verify deployment
       run: |
+        echo "Checking deployment status..."
         kubectl get pods -n kube-system -l app=endpoint-health-checker
         kubectl describe pods -n kube-system -l app=endpoint-health-checker
+
+        echo "Checking deployment events..."
+        kubectl get events -n kube-system --sort-by='.lastTimestamp' | grep endpoint-health-checker
 
     - name: Check pod logs
       run: |
@@ -266,7 +274,7 @@ jobs:
     - name: Download Docker image artifact
       uses: actions/download-artifact@v4
       with:
-        name: docker-image
+        name: endpoint-health-checker
         path: /tmp/
 
     - name: Load and push Docker image
