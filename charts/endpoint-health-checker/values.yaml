@@ -1,5 +1,7 @@
 namespace: kube-system
 replicaCount: 3
+# Master nodes IPs (optional, auto-detected if not specified)
+MASTER_NODES: ""
 global:
   nodeSelector:
     kubernetes.io/os: linux

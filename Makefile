@@ -95,12 +95,12 @@ security-scan: ## Run security scan with gosec
 verify: lint test security-scan ## Run all verification steps (lint, test, security)
 
 .PHONY: install-chart
-install-chart: build-image ## Install chart using Helm
-	helm install endpoint-health-checker ./chart --namespace kube-system --wait
+install-chart: ## Install chart using Helm
+	helm install endpoint-health-checker ./charts/endpoint-health-checker --namespace kube-system --wait
 
 .PHONY: upgrade-chart
-upgrade-chart: build-image ## Upgrade chart using Helm
-	helm upgrade endpoint-health-checker ./chart --namespace kube-system --wait
+upgrade-chart: ## Upgrade chart using Helm
+	helm upgrade endpoint-health-checker ./charts/endpoint-health-checker --namespace kube-system --wait
 
 .PHONY: uninstall-chart
 uninstall-chart: ## Uninstall chart using Helm
