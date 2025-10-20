@@ -9,7 +9,7 @@ global:
   images:
     endpoint_health_checker:
       repository: kubeovn/endpoint-health-checker
-      tag: v0.1.0
+      tag: v0.1.1
       pullPolicy: IfNotPresent
 resources:
   requests:
@@ -28,22 +28,22 @@ affinity:
             app: endpoint-health-checker
         topologyKey: "kubernetes.io/hostname"
 logLevel: 2
-## 切换时间理论最大应该是 healthCheckInterval + healthCheckProbeTimeout * healthCheckRetryCount 然后发生切换。
-## 健康检查轮询时间
+## Theoretical maximum failover time: healthCheckInterval + healthCheckProbeTimeout * healthCheckRetryCount
+## Health check polling interval
 healthCheckInterval: 1s
-## 健康检查并发数
+## Health check concurrency
 healthCheckConcurrency: 10
-## 健康检查超时时间
+## Health check probe timeout
 healthCheckProbeTimeout: 1s
-## 健康检查重试次数
+## Health check retry count
 healthCheckRetryCount: 10
-## Leader选举配置
+## Leader election configuration
 leaderElection:
-  ## Lease锁名称
+  ## Lease lock name
   leaseName: "endpoint-health-checker-leader"
-  ## Lease持续时间
+  ## Lease duration
   leaseDuration: 4s
-  ## 续约截止时间
+  ## Renew deadline
   renewDeadline: 2s
-  ## 重试周期
+  ## Retry period
   retryPeriod: 500ms

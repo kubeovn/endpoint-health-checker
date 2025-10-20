@@ -1,5 +1,5 @@
 apiVersion: v2
 name: endpoint-health-checker
 description: A Helm chart for endpoint health checker with configurable retry mechanism and timeout settings
-version: v0.1.0
-appVersion: "v0.1.0"
+version: v0.1.1
+appVersion: "v0.1.1"

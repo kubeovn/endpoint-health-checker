@@ -1,8 +1,8 @@
 {{/*
-获取副本数：
-- 节点数未知时返回1
-- 节点数<3时返回1
-- 节点数>=3时返回1（如需3可改）
+Get replica count:
+- Return 1 when node count is unknown
+- Return 1 when node count < 3
+- Return 1 when node count >= 3 (can be changed to 3 if needed)
 */}}
 {{- define "endpoint-health-checker.replicaCount" -}}
 {{- $nodes := 0 -}}
