@@ -39,6 +39,12 @@ func TestPodSetOperations(t *testing.T) {
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "192.168.1.100",
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
 		},
 	}
 
@@ -78,6 +84,12 @@ func TestControllerPodEvents(t *testing.T) {
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "192.168.1.100",
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
 		},
 	}
 
@@ -113,6 +125,12 @@ func TestControllerWithDeletedFinalStateUnknown(t *testing.T) {
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,
 			PodIP: "192.168.1.100",
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
 		},
 	}
 
@@ -248,4 +266,72 @@ func TestContextTimeout(t *testing.T) {
 
 	// Verify context has timed out
 	assert.Equal(t, context.DeadlineExceeded, ctx.Err())
+}
+
+func TestPodReadinessCheck(t *testing.T) {
+	podSet := NewPodSet()
+
+	// Test pod without Ready condition should not be added
+	notReadyPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "not-ready-pod",
+			Namespace:   "default",
+			Annotations: map[string]string{"endpoint-health-checker.io/enabled": "true"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			PodIP: "192.168.1.200",
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+
+	podSet.AddOrUpdate(notReadyPod)
+	count, _ := podSet.GetStats()
+	assert.Equal(t, 0, count, "Pod without Ready=True should not be added")
+
+	// Test pod with Ready condition should be added
+	readyPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "ready-pod",
+			Namespace:   "default",
+			Annotations: map[string]string{"endpoint-health-checker.io/enabled": "true"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			PodIP: "192.168.1.201",
+			Conditions: []corev1.PodCondition{
+				{
+					Type:   corev1.PodReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	podSet.AddOrUpdate(readyPod)
+	count, _ = podSet.GetStats()
+	assert.Equal(t, 1, count, "Pod with Ready=True should be added")
+
+	// Test pod without any conditions should not be added
+	noConditionsPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "no-conditions-pod",
+			Namespace:   "default",
+			Annotations: map[string]string{"endpoint-health-checker.io/enabled": "true"},
+		},
+		Status: corev1.PodStatus{
+			Phase:      corev1.PodRunning,
+			PodIP:      "192.168.1.202",
+			Conditions: []corev1.PodCondition{},
+		},
+	}
+
+	podSet.AddOrUpdate(noConditionsPod)
+	count, _ = podSet.GetStats()
+	assert.Equal(t, 1, count, "Pod without conditions should not be added, count should remain 1")
 }
