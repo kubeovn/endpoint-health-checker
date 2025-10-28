@@ -59,13 +59,13 @@ func (s *Scheduler) runHealthCheckScheduler(ctx context.Context, interval time.D
 			}
 			return
 		case <-ticker.C:
-			s.dispatchHealthCheckTasks()
+			s.dispatchHealthCheckTasks(ctx)
 		}
 	}
 }
 
 // dispatchHealthCheckTasks dispatches health check tasks to worker pool
-func (s *Scheduler) dispatchHealthCheckTasks() {
+func (s *Scheduler) dispatchHealthCheckTasks(ctx context.Context) {
 	klog.V(4).Infof("Scheduler: starting health check task dispatch")
 
 	// Get available pods for health check
@@ -96,14 +96,32 @@ func (s *Scheduler) dispatchHealthCheckTasks() {
 		// Create task function for this pod
 		podCopy := pod // Capture pod in closure
 		task := func() {
+			// Create task-specific context with timeout
+			taskCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			// Check if parent context is already canceled
+			if ctx.Err() != nil {
+				klog.V(4).Infof("Skipping health check for pod %s: scheduler stopped", podCopy.GetName())
+				podCopy.SetIsBeingChecked(false)
+				return
+			}
+
 			klog.V(4).Infof("Worker: starting health check for pod %s (IP: %s)", podCopy.GetName(), podCopy.GetIP())
 			start := time.Now()
 
-			err := s.config.CheckPod(s.clientset, podCopy)
+			err := s.config.CheckPod(taskCtx, s.clientset, podCopy)
 
 			duration := time.Since(start)
 			if err != nil {
-				klog.Warningf("Worker: health check failed for pod %s: %v", podCopy.GetName(), err)
+				switch err {
+				case context.Canceled:
+					klog.Infof("Health check for pod %s canceled", podCopy.GetName())
+				case context.DeadlineExceeded:
+					klog.Warningf("Health check for pod %s timeout after %v", podCopy.GetName(), duration)
+				default:
+					klog.Warningf("Worker: health check failed for pod %s: %v", podCopy.GetName(), err)
+				}
 			} else {
 				klog.V(3).Infof("Worker: completed health check for pod %s in %v", podCopy.GetName(), duration)
 			}

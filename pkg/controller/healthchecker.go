@@ -95,12 +95,18 @@ func (hc *HealthChecker) GetRetryCount() int {
 }
 
 // CheckPod performs health check on a pod
-func (hc *HealthChecker) CheckPod(clientset kubernetes.Interface, pod HealthCheckPodInfo) error {
+func (hc *HealthChecker) CheckPod(ctx context.Context, clientset kubernetes.Interface, pod HealthCheckPodInfo) error {
+	// Check if context is already canceled
+	if err := ctx.Err(); err != nil {
+		pod.SetIsBeingChecked(false)
+		return err
+	}
+
 	// Perform health check
 	healthy := hc.performHealthCheck(pod)
 
 	// Update pod status if changed
-	if err := hc.updatePodStatusIfChanged(clientset, pod, healthy); err != nil {
+	if err := hc.updatePodStatusIfChanged(ctx, clientset, pod, healthy); err != nil {
 		return err
 	}
 
@@ -158,7 +164,7 @@ func (hc *HealthChecker) checkICMP(pod HealthCheckPodInfo, config *HealthCheckCo
 }
 
 // updatePodStatusIfChanged updates pod ready status only if health status changed
-func (hc *HealthChecker) updatePodStatusIfChanged(clientset kubernetes.Interface, pod HealthCheckPodInfo, healthy bool) error {
+func (hc *HealthChecker) updatePodStatusIfChanged(ctx context.Context, clientset kubernetes.Interface, pod HealthCheckPodInfo, healthy bool) error {
 	// Check if health status has changed
 	lastStatus := pod.GetLastHealthStatus()
 	statusChanged := lastStatus == nil || *lastStatus != healthy
@@ -170,7 +176,7 @@ func (hc *HealthChecker) updatePodStatusIfChanged(clientset kubernetes.Interface
 	}
 
 	// Get pod from Kubernetes API
-	k8sPod, err := clientset.CoreV1().Pods(pod.GetNamespace()).Get(context.Background(), pod.GetName(), metav1.GetOptions{})
+	k8sPod, err := clientset.CoreV1().Pods(pod.GetNamespace()).Get(ctx, pod.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			klog.Infof("Pod %s/%s not found in Kubernetes, should be removed from PodSet",
@@ -180,7 +186,7 @@ func (hc *HealthChecker) updatePodStatusIfChanged(clientset kubernetes.Interface
 		return fmt.Errorf("failed to get pod %s/%s: %w", pod.GetNamespace(), pod.GetName(), err)
 	}
 
-	if err := updatePodReadyWithPod(clientset, k8sPod, healthy); err != nil {
+	if err := updatePodReadyWithPod(ctx, clientset, k8sPod, healthy); err != nil {
 		klog.Errorf("update pod %s/%s ready failed: %v", pod.GetNamespace(), pod.GetName(), err)
 		return err
 	}
@@ -278,7 +284,7 @@ func icmpProbe(ip string, count int, timeout time.Duration) error {
 
 	return nil
 }
-func updatePodReadyWithPod(clientset kubernetes.Interface, pod *corev1.Pod, success bool) error {
+func updatePodReadyWithPod(ctx context.Context, clientset kubernetes.Interface, pod *corev1.Pod, success bool) error {
 	klog.V(4).Infof("Updating pod status: namespace=%s, name=%s, success=%v", pod.Namespace, pod.Name, success)
 
 	hasReadinessGate := hasReadinessGate(pod)
@@ -313,7 +319,7 @@ func updatePodReadyWithPod(clientset kubernetes.Interface, pod *corev1.Pod, succ
 	}
 
 	_, err = clientset.CoreV1().Pods(pod.Namespace).Patch(
-		context.Background(),
+		ctx,
 		pod.Name,
 		types.MergePatchType,
 		patchBytes,
