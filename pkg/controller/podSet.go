@@ -38,6 +38,12 @@ func (ps *PodSet) AddOrUpdate(pod *corev1.Pod) {
 		return
 	}
 
+	if !isPodReady(pod) {
+		klog.V(4).Infof("Skipping pod %s/%s: waiting for initial readiness probe to pass",
+			pod.Namespace, pod.Name)
+		return
+	}
+
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
@@ -174,6 +180,16 @@ func shouldCheckPod(pod *corev1.Pod) bool {
 		}
 	}
 
+	return false
+}
+
+// isPodReady checks if Pod has passed kubelet's readiness probe
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
 	return false
 }
 
