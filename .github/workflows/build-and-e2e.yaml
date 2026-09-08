@@ -50,8 +50,9 @@ jobs:
           ${{ runner.os }}-go-${{ steps.setup-go.outputs.go-version }}-
 
     - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@v9
       with:
+        version: v2.13.1
         args: --timeout=10m
 
     - name: Download dependencies
